@@ -1,48 +1,71 @@
 # rc-pulse 🦊
 
-> Turn your RevenueCat Charts API data into actionable subscription health reports — in one command.
+> Turn your RevenueCat Charts API data into actionable subscription health reports — in one command, or directly in the browser.
 
-![rc-pulse screenshot](https://img.shields.io/badge/rc--pulse-v0.1.0-10b981?style=flat-square) ![Python](https://img.shields.io/badge/python-3.9%2B-3b82f6?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-8b5cf6?style=flat-square)
-
-**rc-pulse** is an open-source Python CLI that connects to the [RevenueCat Charts API v2](https://www.revenuecat.com/docs/api-v2), fetches your subscription metrics, and generates a beautiful self-contained HTML health report with:
-
-- 📊 **KPI overview** — MRR, ARR, Active Subscribers, Revenue, New Customers
-- 🏥 **Subscription Health Score** (0–100) with grade and actionable insights
-- 📈 **Trend charts** — MRR growth, Active Subs, Revenue, New Customers
-- 🎯 **Benchmark comparisons** — How do your metrics compare to industry averages?
+[![rc-pulse](https://img.shields.io/badge/rc--pulse-v0.2.0-10b981?style=flat-square)](https://layer-group.github.io/rc-pulse/)
+[![Python](https://img.shields.io/badge/python-3.9%2B-3b82f6?style=flat-square)](https://pypi.org/project/rc-pulse/)
+[![License](https://img.shields.io/badge/license-MIT-8b5cf6?style=flat-square)](LICENSE)
+[![Built by AI](https://img.shields.io/badge/built%20by-Finn%20%F0%9F%A6%8A%20AI%20Agent-f59e0b?style=flat-square)](https://finn.maduro.dev)
 
 ---
 
-## Quick Start
+## 🌐 [Live Web Dashboard →](https://layer-group.github.io/rc-pulse/)
+
+**No install needed.** Open the dashboard, paste your RevenueCat API key (or click "Demo Mode" to see real Dark Noise data), and get instant charts, health score, and benchmarks — all 100% client-side.
+
+---
+
+## What rc-pulse gives you
+
+| Feature | Web Dashboard | Python CLI |
+|---------|:---:|:---:|
+| KPI overview (MRR, ARR, Active Subs, Revenue) | ✅ | ✅ |
+| Subscription Health Score (0–100 with grade) | ✅ | ✅ |
+| Industry benchmark comparisons | ✅ | ✅ |
+| MRR trend chart | ✅ | ✅ |
+| Active subscriptions chart | ✅ | ✅ |
+| Revenue chart | ✅ | ✅ |
+| MRR growth momentum chart | ✅ | ✅ |
+| Actionable insights | ✅ | ✅ |
+| Demo mode (real Dark Noise data) | ✅ | ❌ |
+| Saveable HTML report | ❌ | ✅ |
+| CI/CD / automation | ❌ | ✅ |
+| Zero data stored | ✅ (browser) | ✅ (local) |
+
+---
+
+## 🚀 Web Dashboard Quick Start
+
+1. Go to **[layer-group.github.io/rc-pulse](https://layer-group.github.io/rc-pulse/)**
+2. Enter your RevenueCat V2 API key (needs `charts:read` scope)
+3. Click **Analyze →**
+
+Your key never leaves your browser. Requests go directly to the RevenueCat API via CORS.
+
+**Don't have a key?** Click "View Dark Noise demo" to explore with real data.
+
+---
+
+## 🐍 Python CLI Quick Start
 
 ```bash
 pip install rc-pulse
 
-# Generate a report (opens in browser automatically)
+# Generate a report (opens in browser)
 rc-pulse report --api-key sk_your_key_here
 
 # Save to file
 rc-pulse report --api-key sk_your_key_here --output report.html
 
-# Use environment variables
+# Use environment variable
 export RC_API_KEY=sk_your_key_here
 rc-pulse report
 ```
 
----
-
-## Installation
-
-**Requirements:** Python 3.9+
+**Or install from source:**
 
 ```bash
-pip install rc-pulse
-```
-
-Or install from source:
-
-```bash
-git clone https://github.com/heyfinn/rc-pulse
+git clone https://github.com/Layer-Group/rc-pulse
 cd rc-pulse
 pip install -e .
 ```
@@ -56,15 +79,13 @@ pip install -e .
 3. Create a new **V2 Secret Key** with `charts:read` permission
 4. Copy the key (starts with `sk_`)
 
-> **Note:** rc-pulse only needs read access. It never writes data to your RevenueCat account.
+> **Security note:** rc-pulse only needs read access. It never writes data to your RevenueCat account. In the web dashboard, your key is never stored — it lives only in your browser session.
 
 ---
 
-## Commands
+## Python CLI Commands
 
 ### `rc-pulse report`
-
-Generate a health report for your app.
 
 ```
 Options:
@@ -89,8 +110,6 @@ rc-pulse report --api-key $RC_API_KEY --output weekly-report.html --no-open
 
 ### `rc-pulse projects`
 
-List all projects for an API key.
-
 ```bash
 rc-pulse projects --api-key sk_xxx
 ```
@@ -99,18 +118,16 @@ rc-pulse projects --api-key sk_xxx
 
 ## Health Score Methodology
 
-The **Subscription Health Score** (0–100) is calculated from four key signals:
+The **Subscription Health Score** (0–100) is calculated from three key signals:
 
 | Signal | Weight | Excellent | Good | Warning | Critical |
 |--------|--------|-----------|------|---------|----------|
-| Monthly Churn Rate | 40pts | < 0.5% | < 2% | < 5% | ≥ 5% |
-| MRR Growth (3-month) | 25pts | > 20% | > 5% | > 0% | Declining |
-| Trial Conversion (7d) | 25pts | > 5% | > 2% | > 0.5% | < 0.5% |
-| Refund Rate | 10pts | < 1% | < 3% | ≥ 3% | — |
+| Monthly Churn Rate | 40pts | < 0.5% | < 2% | < 2–5% | ≥ 5% |
+| MRR Growth (3-month) | 35pts | > 20% | > 5% | 0–5% | Declining |
+| Refund Rate | 15pts | < 1% | < 3% | ≥ 3% | — |
 
 **Industry benchmarks** (B2C subscription apps):
 - Monthly churn: 2–5% is typical; < 1% is exceptional
-- Trial conversion (7-day): 2–4% is average; > 5% is strong
 - MRR growth: > 10% month-over-month is healthy for early-stage apps
 - Refund rate: < 2% is normal; > 5% signals product/expectation issues
 
@@ -118,7 +135,7 @@ The **Subscription Health Score** (0–100) is calculated from four key signals:
 
 ## Use Cases
 
-**🚀 Weekly health check**
+**🚀 Weekly health check (CLI)**
 ```bash
 # Add to cron or GitHub Actions
 rc-pulse report --api-key $RC_API_KEY --output reports/$(date +%Y-%m-%d).html --no-open
@@ -128,11 +145,9 @@ rc-pulse report --api-key $RC_API_KEY --output reports/$(date +%Y-%m-%d).html --
 Generate a report before board meetings. The health score and benchmark section gives investors quick context.
 
 **🔍 Diagnosing retention issues**
-Churn chart + MRR movement breakdown helps identify which cohorts are churning and when.
+The churn chart + MRR growth breakdown helps identify cohort-level retention patterns.
 
-**🤖 Agentic workflows**
-Use the RevenueCat API client directly:
-
+**🤖 Agentic workflows (Python library)**
 ```python
 from rc_pulse.api import RevenueCatClient
 from rc_pulse.health import calculate_health_score
@@ -147,42 +162,35 @@ for insight in health['insights']:
     print(f"  → {insight}")
 ```
 
----
-
-## Output Example
-
-The generated HTML report includes:
-
-```
-┌─────────────────────────────────────────────┐
-│  rc-pulse               Dark Noise           │
-│                         Generated Mar 2026   │
-├──────────┬──────────┬──────────┬────────────┤
-│  $4,538  │  2,519   │  $4,726  │   1,611    │
-│   MRR    │  Active  │ Rev(28d) │ New Cust.  │
-├──────────┴──────────┴──────────┴────────────┤
-│  ┌──────────────────────────────────────┐   │
-│  │  90  A  Excellent                    │   │
-│  │  ✅ Your metrics look healthy!        │   │
-│  └──────────────────────────────────────┘   │
-├─────────────────────────────────────────────┤
-│  MRR Trend ████████████████████            │
-│  Active Subs ████████████████             │
-└─────────────────────────────────────────────┘
-```
+**🔗 Quick share (Web Dashboard)**
+Share the [live dashboard link](https://layer-group.github.io/rc-pulse/) with your team and have everyone use their own key.
 
 ---
 
-## Why rc-pulse?
+## Architecture
 
-RevenueCat's dashboard is great for day-to-day monitoring, but sometimes you need:
+```
+rc-pulse web dashboard
+┌─────────────────────────────────────────────────────┐
+│  Browser (client-side only)                         │
+│                                                     │
+│  index.html  →  fetch('api.revenuecat.com/v2/...')  │
+│                         ↓                           │
+│              Parse + calculate health score         │
+│                         ↓                           │
+│              Render Chart.js charts                 │
+│                                                     │
+│  ✅ No server, no proxy, no data storage           │
+└─────────────────────────────────────────────────────┘
 
-- A **portable report** you can email or share with stakeholders
-- A **health score** that distills 10+ metrics into one number
-- **Benchmark context** — is my 2% churn good or bad?
-- **Automated reporting** in CI/CD pipelines or agent workflows
-
-rc-pulse fills that gap.
+rc-pulse Python CLI
+┌─────────────────────────────────────────────────────┐
+│  rc_pulse/api.py   →  RevenueCat API v2             │
+│  rc_pulse/health.py →  Score calculation            │
+│  rc_pulse/report.py →  HTML report generation       │
+│  rc_pulse/cli.py   →  Click CLI entrypoint          │
+└─────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -190,16 +198,16 @@ rc-pulse fills that gap.
 
 Made by [Finn](https://finn.maduro.dev) 🦊 — an autonomous AI agent by [Maduro AI](https://maduro.dev).
 
-This tool was built as part of a take-home assignment for RevenueCat's *Agentic AI Developer & Growth Advocate* role. It demonstrates real-world usage of the RevenueCat Charts API v2.
+> 🤖 **Full disclosure:** Finn is an AI agent, not a human developer. This tool was built as part of a take-home assignment for RevenueCat's *Agentic AI Developer & Growth Advocate* role. The data used in demo mode belongs to Dark Noise (a real app by Charlie Chapman) — used with the provided read-only API key.
 
 ---
 
 ## Contributing
 
-PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+PRs welcome!
 
 ```bash
-git clone https://github.com/heyfinn/rc-pulse
+git clone https://github.com/Layer-Group/rc-pulse
 cd rc-pulse
 pip install -e ".[dev]"
 ```

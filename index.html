@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rc-pulse — RevenueCat Subscription Health Dashboard</title>
+  <meta name="description" content="Instant subscription health dashboard powered by the RevenueCat Charts API. Enter your API key and get MRR, churn, growth trends, and a scored health report in seconds." />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0f1e;
+      --surface: #111827;
+      --surface2: #1e2a3a;
+      --surface3: #162032;
+      --border: #1e3a5f;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --muted2: #94a3b8;
+      --green: #10b981;
+      --green-dim: rgba(16,185,129,0.12);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.12);
+      --yellow: #f59e0b;
+      --yellow-dim: rgba(245,158,11,0.12);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
+      --purple: #8b5cf6;
+      --purple-dim: rgba(139,92,246,0.12);
+      --cyan: #06b6d4;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; line-height: 1.6; }
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* ─── Nav ─────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,15,30,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 0;
+    }
+    nav .inner { display: flex; align-items: center; justify-content: space-between; max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
+    .logo { font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+    .logo span { color: var(--green); }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted2); font-size: 0.875rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .badge-ai { background: var(--green-dim); color: var(--green); font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid rgba(16,185,129,0.3); }
+
+    /* ─── Hero ─────────────────────────────────────────────────── */
+    .hero {
+      padding: 5rem 0 3rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--green-dim); color: var(--green);
+      font-size: 0.8rem; font-weight: 600;
+      padding: 0.3rem 0.75rem; border-radius: 999px;
+      border: 1px solid rgba(16,185,129,0.25);
+      margin-bottom: 1.5rem; letter-spacing: 0.05em;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--green) 0%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.125rem; color: var(--muted2); max-width: 580px; margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--green); color: #000;
+      font-weight: 700; font-size: 0.9rem;
+      padding: 0.75rem 1.75rem; border-radius: 8px;
+      border: none; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.35); text-decoration: none; }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      font-weight: 600; font-size: 0.9rem;
+      padding: 0.75rem 1.75rem; border-radius: 8px;
+      border: 1px solid var(--border); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-outline:hover { border-color: var(--green); background: var(--green-dim); text-decoration: none; }
+
+    /* ─── Hero Stats Strip ─────────────────────────────────────── */
+    .hero-stats {
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 2rem 3rem;
+      margin-top: 3rem; padding-top: 2.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-num { font-size: 1.75rem; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+    .hero-stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* ─── Features ─────────────────────────────────────────────── */
+    .features { padding: 4rem 0; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+    }
+    .feature-icon { font-size: 1.5rem; margin-bottom: 0.875rem; }
+    .feature-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .feature-desc { font-size: 0.875rem; color: var(--muted2); line-height: 1.65; }
+
+    /* ─── Dashboard Input ──────────────────────────────────────── */
+    #dashboard-section { padding: 3rem 0; }
+    .dashboard-input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .dashboard-input-card h2 {
+      font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;
+    }
+    .dashboard-input-card p {
+      color: var(--muted2); font-size: 0.9rem; margin-bottom: 1.75rem;
+    }
+    .input-row { display: flex; gap: 0.75rem; }
+    .input-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .input-row input:focus { border-color: var(--green); }
+    .input-row input::placeholder { color: var(--muted); }
+    .divider-or {
+      display: flex; align-items: center; gap: 1rem;
+      color: var(--muted); font-size: 0.85rem; margin: 1.25rem 0;
+    }
+    .divider-or::before, .divider-or::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .demo-btn {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.875rem;
+      color: var(--text);
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .demo-btn:hover { border-color: var(--green); background: var(--green-dim); }
+    .input-note { font-size: 0.78rem; color: var(--muted); margin-top: 1rem; text-align: center; }
+    .input-note a { color: var(--muted2); }
+
+    /* ─── Loading ──────────────────────────────────────────────── */
+    #loading-state { display: none; text-align: center; padding: 4rem 0; }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--green);
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-steps { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; max-width: 320px; margin: 0 auto; }
+    .loading-step { font-size: 0.875rem; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+    .loading-step.active { color: var(--green); }
+    .loading-step.done { color: var(--muted2); }
+    .step-icon { width: 18px; text-align: center; }
+
+    /* ─── Error ────────────────────────────────────────────────── */
+    #error-state { display: none; text-align: center; padding: 3rem 0; }
+    .error-card {
+      background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 12px; padding: 1.5rem; max-width: 480px; margin: 0 auto;
+    }
+    .error-card h3 { color: var(--red); margin-bottom: 0.5rem; }
+    .error-card p { color: var(--muted2); font-size: 0.875rem; }
+    .retry-btn { margin-top: 1rem; display: inline-block; }
+
+    /* ─── Dashboard Results ─────────────────────────────────────── */
+    #results { display: none; }
+
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .results-header h2 { font-size: 1.5rem; font-weight: 700; }
+    .results-meta { color: var(--muted); font-size: 0.8rem; }
+    .reset-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.5rem 1rem;
+      color: var(--muted2); font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* KPI Strip */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem;
+      position: relative; overflow: hidden;
+    }
+    .kpi::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--kpi-accent, var(--green));
+    }
+    .kpi-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; font-weight: 600; }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+    .kpi-sub { color: var(--muted); font-size: 0.75rem; margin-top: 0.35rem; }
+
+    /* Health Card */
+    .health-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem;
+      display: grid; grid-template-columns: auto 1fr; gap: 2rem;
+      align-items: center; margin-bottom: 1.5rem;
+    }
+    .health-circle {
+      width: 110px; height: 110px; border-radius: 50%;
+      border: 4px solid; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .health-num { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .health-grade { font-size: 0.75rem; font-weight: 700; opacity: 0.7; margin-top: 0.2rem; }
+    .health-label { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .insights { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .insight-item {
+      font-size: 0.875rem; color: var(--muted2); padding: 0.6rem 1rem;
+      background: var(--surface2); border-radius: 8px;
+      border-left: 3px solid var(--border);
+    }
+
+    /* Benchmarks */
+    .benchmarks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .benchmark {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.25rem;
+    }
+    .benchmark-metric { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; font-weight: 600; }
+    .benchmark-value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .benchmark-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+    .status-excellent { color: var(--green); }
+    .status-good { color: var(--blue); }
+    .status-warning { color: var(--yellow); }
+    .status-critical { color: var(--red); }
+
+    /* Chart Grid */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .chart-title { font-size: 0.9rem; font-weight: 600; color: var(--muted2); margin-bottom: 0.35rem; }
+    .chart-subtitle { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* Section Labels */
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 0.875rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* Subscription Status */
+    .status-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .status-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.25rem;
+    }
+    .status-item-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .status-item-value { font-size: 1.2rem; font-weight: 700; }
+    .status-item-pct { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* API Info */
+    .api-info {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .api-info-icon { font-size: 1.25rem; }
+    .api-info-text { flex: 1; }
+    .api-info-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .api-info-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border); padding: 2.5rem 0;
+      margin-top: 4rem;
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .footer-left { font-size: 0.8rem; color: var(--muted); }
+    .footer-left a { color: var(--muted2); }
+    .footer-right { display: flex; gap: 1.25rem; }
+    .footer-right a { font-size: 0.8rem; color: var(--muted); }
+    .footer-right a:hover { color: var(--text); }
+    .footer-disclaimer {
+      margin-top: 1rem; padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem; color: var(--muted);
+      text-align: center;
+    }
+
+    /* Demo banner */
+    .demo-banner {
+      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05));
+      border: 1px solid rgba(245,158,11,0.3); border-radius: 10px;
+      padding: 0.875rem 1.25rem; margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      font-size: 0.875rem; color: var(--yellow);
+    }
+    .demo-banner strong { color: var(--yellow); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .health-card { grid-template-columns: 1fr; text-align: center; }
+      .health-card .health-circle { margin: 0 auto; }
+      .input-row { flex-direction: column; }
+      .hero { padding: 3rem 0 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="inner">
+    <div class="logo">rc<span>-pulse</span></div>
+    <div class="nav-links">
+      <span class="badge-ai">🤖 Built by AI Agent</span>
+      <a href="https://github.com/Layer-Group/rc-pulse" target="_blank">GitHub</a>
+      <a href="https://finn.maduro.dev" target="_blank">About Finn</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">⚡ RevenueCat Charts API v2</div>
+    <h1>Your subscription health,<br/><em>decoded in seconds</em></h1>
+    <p>Paste your RevenueCat API key. Get instant charts, a health score, benchmark comparisons, and actionable insights — all in the browser, zero backend.</p>
+    <div class="hero-actions">
+      <a href="#dashboard-section" class="btn-primary">▶ Launch Dashboard</a>
+      <a href="https://github.com/Layer-Group/rc-pulse" class="btn-outline" target="_blank">⭐ View on GitHub</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">7</div>
+        <div class="hero-stat-label">charts fetched</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">1 click</div>
+        <div class="hero-stat-label">zero setup</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">0</div>
+        <div class="hero-stat-label">data stored</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">100%</div>
+        <div class="hero-stat-label">client-side</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">KPI Overview</div>
+        <div class="feature-desc">MRR, ARR, Active Subscriptions, Revenue, and New Customers — all fetched live from the Charts API and visualized instantly.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏥</div>
+        <div class="feature-title">Health Score (0–100)</div>
+        <div class="feature-desc">A composite score built from churn rate, MRR growth, and refund rate, benchmarked against B2C subscription app industry averages.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Trend Charts</div>
+        <div class="feature-desc">MRR growth over time, active subscriptions trend, revenue history — interactive charts rendered with Chart.js, no backend required.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-title">Keys Stay in Your Browser</div>
+        <div class="feature-desc">Your API key never leaves your browser. We make direct requests to the RevenueCat API via CORS — no proxies, no servers, no storage.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-title">Built for Agent Workflows</div>
+        <div class="feature-desc">Also available as a Python CLI (<code>pip install rc-pulse</code>) for integration into CI/CD pipelines and autonomous agent systems.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🆓</div>
+        <div class="feature-title">Free & Open Source</div>
+        <div class="feature-desc">MIT licensed. Built by Finn 🦊, an autonomous AI agent by Maduro AI, as part of a take-home assignment for RevenueCat.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD INPUT -->
+<section id="dashboard-section">
+  <div class="container">
+    <div id="input-state">
+      <div class="dashboard-input-card">
+        <h2>🚀 Launch your dashboard</h2>
+        <p>Enter your RevenueCat V2 API key with <code>charts:read</code> permission. Your key is never stored or sent to any server — requests go directly to RevenueCat.</p>
+        <div class="input-row">
+          <input type="password" id="api-key-input" placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          <button class="btn-primary" onclick="loadDashboard()">Analyze →</button>
+        </div>
+        <div class="divider-or">or</div>
+        <button class="demo-btn" onclick="loadDemo()">
+          🎵 View Dark Noise demo (real RevenueCat data)
+        </button>
+        <div class="input-note">
+          Need an API key? <a href="https://app.revenuecat.com/settings/api-keys" target="_blank">Create one in your RevenueCat dashboard</a> →
+          (Project Settings → API Keys → New V2 Secret Key with <em>charts:read</em>)
+        </div>
+      </div>
+    </div>
+
+    <div id="loading-state">
+      <div class="spinner"></div>
+      <p style="color: var(--muted2); margin-bottom: 1.5rem; font-size: 0.9rem;">Fetching your subscription data...</p>
+      <ul class="loading-steps" id="loading-steps">
+        <li class="loading-step" id="step-1"><span class="step-icon">⏳</span> Connecting to RevenueCat API</li>
+        <li class="loading-step" id="step-2"><span class="step-icon">⏳</span> Fetching overview metrics</li>
+        <li class="loading-step" id="step-3"><span class="step-icon">⏳</span> Loading MRR & ARR charts</li>
+        <li class="loading-step" id="step-4"><span class="step-icon">⏳</span> Fetching churn & revenue data</li>
+        <li class="loading-step" id="step-5"><span class="step-icon">⏳</span> Calculating health score</li>
+      </ul>
+    </div>
+
+    <div id="error-state">
+      <div class="error-card">
+        <h3>❌ Failed to load data</h3>
+        <p id="error-msg">Something went wrong. Check your API key and try again.</p>
+      </div>
+      <button class="btn-outline retry-btn" onclick="resetDashboard()">← Try again</button>
+    </div>
+
+    <div id="results">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <strong style="color: var(--text);">rc<span style="color: var(--green);">-pulse</span></strong> —
+        Subscription health dashboards for RevenueCat<br/>
+        Built by <a href="https://finn.maduro.dev" target="_blank">Finn</a> 🦊 (AI agent) ·
+        <a href="https://github.com/Layer-Group/rc-pulse" target="_blank">GitHub</a> ·
+        MIT License
+      </div>
+      <div class="footer-right">
+        <a href="https://www.revenuecat.com/docs/api-v2" target="_blank">RC API Docs</a>
+        <a href="https://github.com/Layer-Group/rc-pulse#readme" target="_blank">Docs</a>
+        <a href="https://finn.maduro.dev" target="_blank">About</a>
+      </div>
+    </div>
+    <div class="footer-disclaimer">
+      🤖 This tool was built by Finn, an autonomous AI agent by <a href="https://maduro.dev" target="_blank">Maduro AI</a>, as a take-home assignment for RevenueCat's Agentic AI Developer &amp; Growth Advocate role.
+      Your API keys are never stored. RevenueCat® is a trademark of RevenueCat, Inc. — this tool is not officially affiliated with RevenueCat.
+    </div>
+  </div>
+</footer>
+
+<script>
+// ─── Demo Data (Dark Noise — real RevenueCat Charts API data, March 2026) ───
+
+const DEMO_DATA = {
+  isDemoMode: true,
+  appName: 'Dark Noise',
+  projectId: 'proj058a6330',
+  overview: {
+    mrr: 4540,
+    arr: null,
+    active_subscriptions: 2520,
+    active_trials: 64,
+    revenue: 4673,
+    new_customers: 1610,
+    active_users: 14050,
+    num_tx_last_28_days: 602,
+  },
+  mrr: {
+    values: [
+      {cohort:1680307200,value:702.27},{cohort:1682899200,value:866.22},
+      {cohort:1685577600,value:1106.88},{cohort:1688169600,value:1346.97},
+      {cohort:1690848000,value:1470.03},{cohort:1693526400,value:2617.47},
+      {cohort:1696118400,value:3255.63},{cohort:1698796800,value:3621.79},
+      {cohort:1701388800,value:3756.26},{cohort:1704067200,value:4096.9},
+      {cohort:1706745600,value:4424.33},{cohort:1709251200,value:4714.78},
+      {cohort:1711929600,value:4668.03},{cohort:1714521600,value:4734.95},
+      {cohort:1717200000,value:4825.0},{cohort:1719792000,value:4881.13},
+      {cohort:1722470400,value:4972.26},{cohort:1725148800,value:4689.27},
+      {cohort:1727740800,value:4592.88},{cohort:1730419200,value:4611.51},
+      {cohort:1733011200,value:4658.17},{cohort:1735689600,value:4642.17},
+      {cohort:1738368000,value:4641.24},{cohort:1740787200,value:4617.24},
+      {cohort:1743465600,value:4585.61},{cohort:1746057600,value:4553.21},
+      {cohort:1748736000,value:4608.92},{cohort:1751328000,value:4623.17},
+      {cohort:1754006400,value:4587.34},{cohort:1756684800,value:4460.63},
+      {cohort:1759276800,value:4322.58},{cohort:1761955200,value:4421.66},
+      {cohort:1764547200,value:4411.46},{cohort:1767225600,value:4544.53},
+      {cohort:1769904000,value:4561.94},
+    ],
+    summary: { average: { MRR: 4108.01 } },
+  },
+  actives: {
+    values: [
+      {cohort:1725148800,value:2682},{cohort:1727740800,value:2618},
+      {cohort:1730419200,value:2593},{cohort:1733011200,value:2640},
+      {cohort:1735689600,value:2644},{cohort:1738368000,value:2637},
+      {cohort:1740787200,value:2626},{cohort:1743465600,value:2600},
+      {cohort:1746057600,value:2560},{cohort:1748736000,value:2570},
+      {cohort:1751328000,value:2584},{cohort:1754006400,value:2571},
+      {cohort:1756684800,value:2492},{cohort:1759276800,value:2403},
+      {cohort:1761955200,value:2470},{cohort:1764547200,value:2471},
+      {cohort:1767225600,value:2535},{cohort:1769904000,value:2537},
+    ],
+    summary: { average: { Actives: 2304 } },
+  },
+  revenue: {
+    values: [
+      {cohort:1759276800,revenue:5816.3,transactions:383},
+      {cohort:1761955200,revenue:5594.9,transactions:429},
+      {cohort:1764547200,revenue:5120.87,transactions:353},
+      {cohort:1767225600,revenue:7243.06,transactions:464},
+      {cohort:1769904000,revenue:4619.01,transactions:345},
+    ],
+  },
+  churn: {
+    summary: { average: { 'Churn Rate': 0.17, 'Churned Actives': 3.86, 'Actives': 2274 } },
+  },
+  refund: {
+    summary: { average: { 'Refund Rate': 1.82 } },
+  },
+};
+
+// ─── Utility Functions ───────────────────────────────────────────────────────
+
+function fmt$(n) {
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'k';
+  return '$' + Math.round(n).toLocaleString();
+}
+function fmtNum(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return Math.round(n).toLocaleString();
+}
+function tsToLabel(ts) {
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
+// ─── Fetch Helpers ───────────────────────────────────────────────────────────
+
+const RC_BASE = 'https://api.revenuecat.com/v2';
+let currentApiKey = '';
+
+async function rcGet(path) {
+  const r = await fetch(RC_BASE + path, {
+    headers: { 'Authorization': 'Bearer ' + currentApiKey }
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(body.message || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ─── Loading Step Helper ─────────────────────────────────────────────────────
+
+function setStep(id, status) {
+  const el = document.getElementById('step-' + id);
+  if (!el) return;
+  el.className = 'loading-step ' + status;
+  const icon = el.querySelector('.step-icon');
+  if (status === 'active') icon.textContent = '🔄';
+  else if (status === 'done') icon.textContent = '✅';
+}
+
+// ─── Load Live Data ──────────────────────────────────────────────────────────
+
+async function loadDashboard() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key || !key.startsWith('sk_')) {
+    showError('API key must start with sk_. Get yours from RevenueCat Dashboard → Project Settings → API Keys.');
+    return;
+  }
+  currentApiKey = key;
+  showLoading();
+
+  try {
+    // Step 1: Get projects
+    setStep(1, 'active');
+    const projectsData = await rcGet('/projects');
+    const project = projectsData.items?.[0];
+    if (!project) throw new Error('No projects found for this API key.');
+    setStep(1, 'done');
+
+    // Step 2: Overview
+    setStep(2, 'active');
+    const overviewData = await rcGet(`/projects/${project.id}/metrics/overview`);
+    const metrics = {};
+    overviewData.metrics.forEach(m => metrics[m.id] = m.value);
+    setStep(2, 'done');
+
+    // Step 3: MRR + ARR
+    setStep(3, 'active');
+    const [mrrData, arrData] = await Promise.all([
+      rcGet(`/projects/${project.id}/charts/mrr`).catch(() => null),
+      rcGet(`/projects/${project.id}/charts/arr`).catch(() => null),
+    ]);
+    setStep(3, 'done');
+
+    // Step 4: Churn + Revenue + Actives + Refund
+    setStep(4, 'active');
+    const [churnData, revenueRaw, activesData, refundData] = await Promise.all([
+      rcGet(`/projects/${project.id}/charts/churn`).catch(() => null),
+      rcGet(`/projects/${project.id}/charts/revenue?resolution=month`).catch(() => null),
+      rcGet(`/projects/${project.id}/charts/actives?resolution=month`).catch(() => null),
+      rcGet(`/projects/${project.id}/charts/refund_rate`).catch(() => null),
+    ]);
+
+    // Parse revenue (measures 0 and 1 interleaved)
+    let revValues = [];
+    if (revenueRaw?.values) {
+      const byC = {};
+      revenueRaw.values.forEach(v => {
+        if (!byC[v.cohort]) byC[v.cohort] = { cohort: v.cohort, incomplete: v.incomplete };
+        if (v.measure === 0) byC[v.cohort].revenue = v.value;
+        if (v.measure === 1) byC[v.cohort].transactions = v.value;
+      });
+      revValues = Object.values(byC).filter(v => !v.incomplete && v.revenue > 0).sort((a,b) => a.cohort - b.cohort).slice(-12);
+    }
+
+    // Parse actives (monthly, complete only)
+    let activesValues = [];
+    if (activesData?.values) {
+      activesValues = activesData.values.filter(v => !v.incomplete).map(v => ({cohort: v.cohort, value: v.value})).slice(-18);
+    }
+
+    setStep(4, 'done');
+    setStep(5, 'active');
+
+    const data = {
+      isDemoMode: false,
+      appName: project.name,
+      projectId: project.id,
+      overview: metrics,
+      mrr: mrrData,
+      actives: { values: activesValues, summary: activesData?.summary },
+      revenue: { values: revValues },
+      churn: churnData,
+      refund: refundData,
+    };
+
+    setStep(5, 'done');
+
+    renderResults(data);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+// ─── Load Demo ───────────────────────────────────────────────────────────────
+
+function loadDemo() {
+  showLoading();
+  const steps = [1, 2, 3, 4, 5];
+  let i = 0;
+  const ticker = setInterval(() => {
+    if (i > 0) setStep(steps[i-1], 'done');
+    if (i < steps.length) { setStep(steps[i], 'active'); i++; }
+    else {
+      clearInterval(ticker);
+      setTimeout(() => renderResults(DEMO_DATA), 400);
+    }
+  }, 350);
+}
+
+// ─── Health Score ─────────────────────────────────────────────────────────────
+
+function calcHealth(data) {
+  let score = 100;
+  const insights = [];
+  const benchmarks = [];
+
+  // Churn
+  const churnRate = data.churn?.summary?.average?.['Churn Rate'];
+  if (churnRate != null) {
+    if (churnRate < 0.5) {
+      benchmarks.push({ metric: 'Monthly Churn', value: churnRate.toFixed(2) + '%', status: 'excellent', note: 'Industry avg ~2.5%' });
+    } else if (churnRate < 2.0) {
+      score -= 10;
+      benchmarks.push({ metric: 'Monthly Churn', value: churnRate.toFixed(2) + '%', status: 'good', note: 'Industry avg ~2.5%' });
+      insights.push('Churn is healthy — monitor trends and invest in onboarding quality.');
+    } else if (churnRate < 5.0) {
+      score -= 25;
+      benchmarks.push({ metric: 'Monthly Churn', value: churnRate.toFixed(2) + '%', status: 'warning', note: 'Industry avg ~2.5%' });
+      insights.push('⚠️ Churn above average. Launch win-back campaigns and in-app feedback.');
+    } else {
+      score -= 40;
+      benchmarks.push({ metric: 'Monthly Churn', value: churnRate.toFixed(2) + '%', status: 'critical', note: 'Industry avg ~2.5%' });
+      insights.push('🚨 High churn. Prioritize: exit surveys, pause subscriptions, cancellation flows.');
+    }
+  }
+
+  // MRR growth (3-month)
+  const mrrVals = (data.mrr?.values || []).filter(v => !v.incomplete);
+  let mrrGrowth = null;
+  if (mrrVals.length >= 3) {
+    const last = mrrVals[mrrVals.length - 1].value;
+    const prev = mrrVals[mrrVals.length - 4]?.value || mrrVals[0].value;
+    if (prev > 0) mrrGrowth = ((last - prev) / prev) * 100;
+  }
+  if (mrrGrowth != null) {
+    if (mrrGrowth > 20) {
+      benchmarks.push({ metric: 'MRR Growth (3mo)', value: '+' + mrrGrowth.toFixed(1) + '%', status: 'excellent', note: 'Strong growth' });
+    } else if (mrrGrowth > 5) {
+      benchmarks.push({ metric: 'MRR Growth (3mo)', value: '+' + mrrGrowth.toFixed(1) + '%', status: 'good', note: 'Healthy growth' });
+    } else if (mrrGrowth > 0) {
+      score -= 10;
+      benchmarks.push({ metric: 'MRR Growth (3mo)', value: '+' + mrrGrowth.toFixed(1) + '%', status: 'warning', note: 'Slow growth' });
+      insights.push('📈 MRR growth is slow. Test pricing changes or add a new tier.');
+    } else {
+      score -= 25;
+      benchmarks.push({ metric: 'MRR Growth (3mo)', value: mrrGrowth.toFixed(1) + '%', status: 'critical', note: 'MRR declining' });
+      insights.push('🚨 MRR is declining. Investigate churn and ramp up acquisition.');
+    }
+  }
+
+  // Refund rate
+  const refundRate = data.refund?.summary?.average?.['Refund Rate'];
+  if (refundRate != null) {
+    if (refundRate < 1.0) {
+      benchmarks.push({ metric: 'Refund Rate', value: refundRate.toFixed(2) + '%', status: 'excellent', note: 'Industry avg ~2%' });
+    } else if (refundRate < 3.0) {
+      benchmarks.push({ metric: 'Refund Rate', value: refundRate.toFixed(2) + '%', status: 'good', note: 'Industry avg ~2%' });
+    } else {
+      score -= 15;
+      benchmarks.push({ metric: 'Refund Rate', value: refundRate.toFixed(2) + '%', status: 'warning', note: 'Industry avg ~2%' });
+      insights.push('⚠️ Elevated refunds. Check App Store reviews for recurring complaints.');
+    }
+  }
+
+  if (insights.length === 0) {
+    insights.push('✅ Metrics look healthy! Keep investing in growth and retention.');
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
+  const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Needs Attention' : 'At Risk';
+  const color = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+  return { score, grade, label, color, insights, benchmarks };
+}
+
+// ─── Chart Registry ───────────────────────────────────────────────────────────
+
+const chartInstances = {};
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c => c.destroy());
+  for (const k in chartInstances) delete chartInstances[k];
+}
+
+function makeChart(id, type, labels, datasets, opts = {}) {
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 800, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e293b',
+          borderColor: '#334155',
+          borderWidth: 1,
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          padding: 10,
+          ...opts.tooltipOpts,
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30,58,95,0.5)' },
+          ticks: { color: '#64748b', font: { size: 11 } },
+        },
+        y: {
+          grid: { color: 'rgba(30,58,95,0.5)' },
+          ticks: { color: '#64748b', font: { size: 11 }, ...opts.yTicks },
+        },
+        ...(opts.extraScales || {}),
+      },
+      ...opts.extra,
+    },
+  });
+}
+
+// ─── Render Results ───────────────────────────────────────────────────────────
+
+function renderResults(data) {
+  destroyCharts();
+  const health = calcHealth(data);
+  const ov = data.overview;
+  const mrr = ov.mrr ?? ov.MRR ?? 0;
+  const arr = (ov.arr ?? mrr * 12);
+  const activeSubs = ov.active_subscriptions ?? 0;
+  const revenue28 = ov.revenue ?? 0;
+  const newCustomers = ov.new_customers ?? 0;
+  const activeTrials = ov.active_trials ?? 0;
+
+  // Build HTML
+  const html = `
+    ${data.isDemoMode ? `
+    <div class="demo-banner">
+      🎵 <span><strong>Demo Mode</strong> — showing real data for Dark Noise, a popular ambient sound app by Charlie Chapman. 
+      <a href="#" onclick="resetDashboard(); return false;" style="color: var(--yellow); text-decoration: underline;">Enter your own key →</a></span>
+    </div>
+    ` : ''}
+
+    <div class="results-header">
+      <div>
+        <h2>${data.appName}</h2>
+        <div class="results-meta">Project ID: <code>${data.projectId}</code> · Generated ${new Date().toLocaleString()}</div>
+      </div>
+      <button class="reset-btn" onclick="resetDashboard()">← New report</button>
+    </div>
+
+    <!-- KPI OVERVIEW -->
+    <div class="section-label">Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi" style="--kpi-accent: #10b981;">
+        <div class="kpi-label">MRR</div>
+        <div class="kpi-value">${fmt$(mrr)}</div>
+        <div class="kpi-sub">Monthly recurring revenue</div>
+      </div>
+      <div class="kpi" style="--kpi-accent: #3b82f6;">
+        <div class="kpi-label">ARR</div>
+        <div class="kpi-value">${fmt$(arr)}</div>
+        <div class="kpi-sub">Annualized run rate</div>
+      </div>
+      <div class="kpi" style="--kpi-accent: #8b5cf6;">
+        <div class="kpi-label">Active Subscribers</div>
+        <div class="kpi-value">${fmtNum(activeSubs)}</div>
+        <div class="kpi-sub">${activeTrials > 0 ? '+ ' + fmtNum(activeTrials) + ' trials' : 'paid subscriptions'}</div>
+      </div>
+      <div class="kpi" style="--kpi-accent: #f59e0b;">
+        <div class="kpi-label">Revenue (28d)</div>
+        <div class="kpi-value">${fmt$(revenue28)}</div>
+        <div class="kpi-sub">Last 28 days</div>
+      </div>
+      <div class="kpi" style="--kpi-accent: #06b6d4;">
+        <div class="kpi-label">New Customers (28d)</div>
+        <div class="kpi-value">${fmtNum(newCustomers)}</div>
+        <div class="kpi-sub">Last 28 days</div>
+      </div>
+    </div>
+
+    <!-- HEALTH SCORE -->
+    <div class="section-label">Subscription Health</div>
+    <div class="health-card">
+      <div class="health-circle" style="border-color: ${health.color}; color: ${health.color};">
+        <div class="health-num">${health.score}</div>
+        <div class="health-grade">Grade ${health.grade}</div>
+      </div>
+      <div>
+        <div class="health-label" style="color: ${health.color};">${health.label}</div>
+        <ul class="insights">
+          ${health.insights.map(i => `<li class="insight-item">${i}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+
+    <!-- BENCHMARKS -->
+    ${health.benchmarks.length > 0 ? `
+    <div class="section-label">Benchmarks</div>
+    <div class="benchmarks-grid">
+      ${health.benchmarks.map(b => `
+        <div class="benchmark">
+          <div class="benchmark-metric">${b.metric}</div>
+          <div class="benchmark-value status-${b.status}">${b.value}</div>
+          <div class="benchmark-note">${b.note}</div>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    <!-- CHARTS -->
+    <div class="section-label">Trends</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">MRR Over Time</div>
+        <div class="chart-subtitle">Monthly Recurring Revenue — all-time history</div>
+        <div class="chart-wrap"><canvas id="chart-mrr"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Active Subscriptions</div>
+        <div class="chart-subtitle">Monthly paid subscriber count (last 18 months)</div>
+        <div class="chart-wrap"><canvas id="chart-actives"></canvas></div>
+      </div>
+      ${data.revenue?.values?.length > 0 ? `
+      <div class="chart-card">
+        <div class="chart-title">Monthly Revenue</div>
+        <div class="chart-subtitle">Actual revenue per month (last 12 months)</div>
+        <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
+      </div>
+      ` : ''}
+      <div class="chart-card">
+        <div class="chart-title">MRR Growth Momentum</div>
+        <div class="chart-subtitle">Month-over-month MRR change (%)</div>
+        <div class="chart-wrap"><canvas id="chart-growth"></canvas></div>
+      </div>
+    </div>
+
+    <!-- API INFO -->
+    <div class="api-info">
+      <div class="api-info-icon">💡</div>
+      <div class="api-info-text">
+        <div class="api-info-title">Want to automate this report?</div>
+        <div class="api-info-sub">Use the rc-pulse Python CLI: <code>pip install rc-pulse && rc-pulse report --api-key YOUR_KEY</code> — generates a self-contained HTML report, perfect for CI/CD pipelines and weekly digests.</div>
+      </div>
+      <a href="https://github.com/Layer-Group/rc-pulse" target="_blank" class="btn-outline" style="flex-shrink: 0; font-size: 0.8rem; padding: 0.5rem 1rem;">View CLI →</a>
+    </div>
+  `;
+
+  document.getElementById('results').innerHTML = html;
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+
+  // Render charts
+  setTimeout(() => {
+    renderCharts(data);
+  }, 100);
+}
+
+function renderCharts(data) {
+  // MRR chart
+  const mrrVals = (data.mrr?.values || []).filter(v => !v.incomplete);
+  if (mrrVals.length > 0) {
+    makeChart('chart-mrr', 'line',
+      mrrVals.map(v => tsToLabel(v.cohort)),
+      [{
+        data: mrrVals.map(v => v.value),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      }],
+      { yTicks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v) } }
+    );
+  }
+
+  // Actives chart
+  const activesVals = data.actives?.values || [];
+  if (activesVals.length > 0) {
+    makeChart('chart-actives', 'bar',
+      activesVals.map(v => tsToLabel(v.cohort)),
+      [{
+        data: activesVals.map(v => v.value),
+        backgroundColor: 'rgba(59,130,246,0.6)',
+        borderColor: '#3b82f6',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+      { yTicks: { callback: v => fmtNum(v) } }
+    );
+  }
+
+  // Revenue chart
+  const revVals = data.revenue?.values || [];
+  if (revVals.length > 0) {
+    makeChart('chart-revenue', 'bar',
+      revVals.map(v => tsToLabel(v.cohort)),
+      [{
+        data: revVals.map(v => v.revenue),
+        backgroundColor: 'rgba(245,158,11,0.6)',
+        borderColor: '#f59e0b',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+      { yTicks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v) } }
+    );
+  }
+
+  // MRR Growth chart
+  const growthData = [];
+  const growthLabels = [];
+  for (let i = 1; i < mrrVals.length; i++) {
+    const prev = mrrVals[i-1].value;
+    const curr = mrrVals[i].value;
+    if (prev > 0) {
+      growthData.push(parseFloat(((curr - prev) / prev * 100).toFixed(2)));
+      growthLabels.push(tsToLabel(mrrVals[i].cohort));
+    }
+  }
+  if (growthData.length > 0) {
+    makeChart('chart-growth', 'bar',
+      growthLabels.slice(-18),
+      [{
+        data: growthData.slice(-18),
+        backgroundColor: growthData.slice(-18).map(v => v >= 0 ? 'rgba(16,185,129,0.65)' : 'rgba(239,68,68,0.65)'),
+        borderColor: growthData.slice(-18).map(v => v >= 0 ? '#10b981' : '#ef4444'),
+        borderWidth: 1,
+        borderRadius: 3,
+      }],
+      { yTicks: { callback: v => v.toFixed(1) + '%' } }
+    );
+  }
+}
+
+// ─── State Management ─────────────────────────────────────────────────────────
+
+function showLoading() {
+  document.getElementById('input-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading-state').style.display = 'block';
+  // Reset steps
+  [1,2,3,4,5].forEach(i => {
+    const el = document.getElementById('step-' + i);
+    if (el) { el.className = 'loading-step'; el.querySelector('.step-icon').textContent = '⏳'; }
+  });
+}
+
+function showError(msg) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-state').style.display = 'block';
+}
+
+function resetDashboard() {
+  destroyCharts();
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('input-state').style.display = 'block';
+  document.getElementById('api-key-input').value = '';
+}
+
+// Enter key on input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('api-key-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadDashboard();
+  });
+});
+</script>
+</body>
+</html>
