@@ -1109,6 +1109,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('api-key-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') loadDashboard();
   });
+
+  // Auto-load demo if ?demo=true in URL
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === 'true') {
+    loadDemo();
+  }
 });
 </script>
 </body>
